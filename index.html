@@ -1,0 +1,1321 @@
+<!doctype html>
+<!--
+  코드 찾기: Ctrl+F에서 아래 영역 이름을 검색하세요.
+  HTML 03: 메인 / HTML 04: 게임 / HTML 05: 도감
+  CSS 01~12: 디자인 / JS 01~09: 게임 동작
+  DATA 01: 기본 능력치 / IMAGE 01: 참고 사진
+  소스 파일을 수정한 뒤 node build.cjs를 실행하면 이 파일에 반영됩니다.
+-->
+<html lang="ko">
+  <!-- ===== HTML 01. 페이지 제목과 기본 설정 ===== -->
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>미사일 강화 게임</title>
+    <meta name="description" content="골드를 모아 20종 미사일을 진화시키는 픽셀 강화 게임">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23c3f76b'/%3E%3Cpath d='M8 24 24 8M12 8h12v12' stroke='%2310141a' stroke-width='4' fill='none'/%3E%3C/svg%3E">
+    <!-- ===== STYLE. 화면 디자인 — CSS 01~12로 검색 ===== -->
+    <style>
+/* ===== CSS 01. 전체 색상 · 기본 글꼴 · 공통 설정 ===== */
+:root{
+  color-scheme:light;
+  --bg:#fff;
+  --panel:#fff;
+  --line:#d0d5da;
+  --muted:#586574;
+  --accent:#477820;
+  --text:#17202b
+}
+*{
+  box-sizing:border-box
+}
+[hidden]{
+  display:none!important
+}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.6 system-ui,-apple-system,'Segoe UI','Malgun Gothic',sans-serif
+}
+
+/* ===== CSS 02. 공통 버튼과 키보드 포커스 ===== */
+button,a{
+  -webkit-tap-highlight-color:transparent
+}
+button{
+  font:inherit;
+  cursor:pointer;
+  border-radius:8px;
+  min-height:48px;
+  font-weight:650;
+  transition:background .18s,transform .18s
+}
+button:hover:not(:disabled){
+  transform:translateY(-2px)
+}
+button:focus-visible,a:focus-visible,.table-wrap:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:5px
+}
+button:disabled{
+  cursor:not-allowed;
+  opacity:.45
+}
+button:active:not(:disabled){
+  transform:translateY(0)
+}
+
+/* ===== CSS 03. 상단 로고와 오른쪽 도감 버튼 ===== */
+.topbar{
+  max-width:1320px;
+  margin:auto;
+  padding:24px 36px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  gap:16px
+}
+.game-started .topbar{
+  display:contents
+}
+.game-started .brand,.game-started footer{
+  display:none
+}
+.missile-panel #catalog-button{
+  position:absolute;
+  right:20px;
+  top:50%;
+  translate:0 -50%;
+  z-index:1;
+  color:#000;
+  border-color:#d0d5da;
+  background:#fff;
+  letter-spacing:normal;
+  white-space:nowrap
+}
+.missile-panel #catalog-button:hover{
+  background:#f1f3f5
+}
+.brand{
+  text-decoration:none;
+  color:var(--accent);
+  font-size:26px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:12px
+}
+.brand span{
+  font-size:15px;
+  letter-spacing:.1em
+}
+.outline{
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  padding:10px 20px
+}
+.outline:hover{
+  background:var(--panel)
+}
+.outline span{
+  margin-left:12px;
+  color:var(--accent)
+}
+
+/* ===== CSS 04. 메인 화면 · 게임 제목 · 시작하기 ===== */
+main{
+  max-width:1248px;
+  margin:auto;
+  padding:40px 24px
+}
+body:not(.game-started) main{padding-block:0}
+.home{
+  position:relative;
+  min-height:max(360px,100dvh);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:0
+}
+#home-title{
+  position:absolute;
+  top:20%;
+  left:0;
+  width:100%;
+  translate:0 -50%
+}
+.eyebrow{
+  font-size:13px;
+  color:var(--accent);
+  letter-spacing:.16em;
+  font-weight:650;
+  margin:0 0 12px
+}
+h1{
+  font-size:clamp(32px,5.5vw,64px);
+  letter-spacing:-.055em;
+  line-height:1.25;
+  margin:0
+}
+h1>span{
+  color:var(--accent)
+}
+.lead{
+  color:var(--muted);
+  font-size:18px;
+  line-height:1.9;
+  margin:26px 0 36px
+}
+.primary{
+  border:0;
+  background:#e7f2df;
+  color:#17200d;
+  padding:16px 24px
+}
+.primary:hover:not(:disabled){
+  background:#d4ff8f
+}
+.start{
+  position:absolute;
+  top:75%;
+  left:50%;
+  translate:-50% -50%;
+  margin-top:0;
+  min-width:240px;
+  display:flex;
+  justify-content:space-between;
+  font-size:18px
+}
+.home-note{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:24px
+}
+
+/* ===== CSS 05. 게임 상단 제목과 보유 골드 ===== */
+.game-heading,.catalog-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:22px;
+  margin-bottom:30px
+}
+#game-title{
+  text-align:center;
+  font-size:32px;
+  margin:0 0 8px
+}
+.game-heading h1,.catalog-heading h1{
+  font-size:34px
+}
+.wallet{
+  color:#000;
+  letter-spacing:normal;
+  text-align:right
+}
+.wallet>span{
+  font-size:13px;
+  color:inherit
+}
+.wallet strong{
+  display:block;
+  font-size:26px;
+  color:inherit;
+  font-variant-numeric:tabular-nums
+}
+.wallet small{
+  font-size:14px
+}
+
+/* ===== CSS 06. 미사일 그림 · 강화 단계 · 진화 진행 막대 ===== */
+/* 06-1. 미사일을 화면 중앙에 배치하고 강화 조작은 아래에 표시합니다. */
+.workshop{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:start;
+  width:100%;
+  max-width:960px;
+  margin:0 auto;
+  gap:24px
+}
+.shop-panel{
+  --muted:#000;
+  --accent:#000;
+  color-scheme:light;
+  width:min(420px,calc(100% - 32px));
+  max-height:calc(100dvh - 32px);
+  overflow-y:auto;
+  color:#000;
+  padding:22px;
+  background:#fff;
+  border:1px solid #000;
+  border-radius:14px
+}
+.shop-panel::backdrop{background:rgb(0 0 0 / .6)}
+.shop-panel form{display:flex;justify-content:flex-end;margin-bottom:8px}
+.shop-panel form button{width:auto}
+.missile-panel #shop-button{
+  position:absolute;
+  left:20px;
+  top:50%;
+  translate:0 -50%;
+  z-index:1;
+  color:#000;
+  border-color:#d0d5da;
+  background:#fff
+}
+.missile-panel #shop-button:hover{background:#f1f3f5}
+.shop-panel h2{margin:0 0 22px;font-size:24px}
+.shop-panel h3{margin:0;font-size:18px}
+.shop-description{font-size:13px;color:var(--muted);line-height:1.7}
+.shop-price{color:var(--accent);font-weight:700}
+.shop-panel button{width:100%;padding:12px 10px;font-size:14px;background:#fff;color:#000;border:1px solid #000}
+.shop-panel button:hover:not(:disabled){background:#fff;color:#000}
+.shop-panel button:disabled{opacity:1}
+#protection-state,#shop-status{color:var(--accent);font-size:13px}
+.game-status{text-align:center;color:var(--accent);margin:18px 0 0}
+.missile-panel,.control-panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:26px
+}
+.missile-panel{
+  position:relative;
+  padding-block:12px;
+  --muted:#586574;
+  --accent:#477820;
+  background:#fff;
+  border:0;
+  color:#17202b
+}
+.panel-head{
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:.08em
+}
+.panel-head .wallet{display:flex;align-items:baseline;gap:8px}
+.sprite-stage{
+  margin:4px 0;
+  background:#fff;
+  border-radius:8px;
+  height:clamp(120px,18vh,190px);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center
+}
+.sprite-stage img{
+  width:100%;
+  max-width:800px;
+  height:100%;
+  object-fit:contain;
+  image-rendering:pixelated
+}
+.missile-heading{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  text-align:center
+}
+.missile-heading p{
+  font-size:13px;
+  color:var(--muted);
+  margin:0
+}
+.upgrade-chance,.missile-heading h2{
+  font-size:28px;
+  margin:2px 0 0
+}
+.upgrade-chance{
+  margin:8px 0 0;
+  text-align:center;
+  font-weight:700
+}
+.upgrade-chance strong{
+  font-weight:inherit
+}
+.level-chip{
+  font:700 24px ui-monospace,monospace;
+  color:var(--accent);
+  background:#e7f2df;
+  padding:8px 16px;
+  border-radius:6px
+}
+
+/* ===== CSS 07. 능력치 · 강화 버튼 · 시험 발사 버튼 ===== */
+/* 07-1. 중앙 미사일 아래의 능력치와 조작 영역 */
+.control-panel h2{
+  font-size:19px;
+  margin:0 0 20px
+}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:22px 18px;
+  margin-bottom:30px
+}
+.stats span{
+  display:block;
+  color:var(--muted);
+  font-size:13px
+}
+.stats strong{
+  display:block;
+  font-size:22px;
+  font-variant-numeric:tabular-nums;
+  margin-top:5px
+}
+.missile-actions{
+  --accent:#c3f76b;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  justify-content:center;
+  gap:8px;
+  max-width:600px;
+  margin:8px auto 0
+}
+.protection-controls{grid-column:1;color:#000}
+.protection-controls p{margin:0 0 8px;font-size:13px}
+.ticket-buttons{display:flex;gap:8px;align-items:stretch}
+.protection-controls #use-ticket,.protection-controls #use-chance{flex:0 0 25%;width:25%;justify-content:center;background:#fff;color:#000;border:1px solid #000;padding:6px 2px;font-size:12px;word-break:keep-all;overflow-wrap:anywhere}
+.missile-actions #upgrade{grid-column:1}
+@media(max-width:520px){
+  .missile-actions{grid-template-columns:minmax(0,1fr)}
+}
+.missile-actions button{
+  flex:1 1 220px;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px
+}
+.missile-actions .secondary{
+  margin-top:0;
+  background:#f3f4f6;
+  border:1px solid #d1d5db;
+  color:#25303d
+}
+.missile-actions .primary{
+  background:#e7f2df;
+  border:1px solid #bdd3aa;
+  color:#29451f
+}
+.missile-actions .primary:hover:not(:disabled){
+  background:#d7e9cb
+}
+.missile-actions .secondary:hover:not(:disabled){
+  background:#e5e7eb
+}
+.missile-actions button span{
+  color:inherit
+}
+.missile-actions button:focus-visible{
+  outline-color:#477820
+}
+.secondary{
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+  padding:14px 24px;
+  margin-top:12px
+}
+.secondary span{
+  color:var(--accent)
+}
+.help{
+  color:var(--muted);
+  font-size:13px;
+  margin:18px 0
+}
+.control-panel #status{
+  font-size:14px;
+  min-height:48px;
+  margin:18px 0 0;
+  color:var(--accent)
+}
+
+/* ===== CSS 08. 미사일 도감과 성능표 ===== */
+.game-footnote,.catalog-note,.footnote{
+  color:var(--muted);
+  font-size:13px
+}
+.catalog-note{
+  margin-bottom:30px
+}
+.section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  margin-bottom:16px
+}
+.section-title h2{
+  font-size:19px
+}
+.section-title>span{
+  font-size:13px;
+  color:var(--muted)
+}
+.table-wrap{
+  overflow-x:auto;
+  border-top:2px solid var(--accent)
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:880px;
+  text-align:left
+}
+th{
+  background:var(--panel);
+  font-size:14px;
+  padding:16px
+}
+th small{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:400
+}
+td{
+  padding:16px;
+  border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums
+}
+.model{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  min-width:310px
+}
+.model img{
+  width:140px;
+  height:90px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  background:white;
+  border-radius:4px
+}
+.model strong{
+  display:block;
+  font-size:15px
+}
+.model small{
+  font-size:12px;
+  color:var(--muted)
+}
+td.damage{
+  color:var(--accent);
+  font-weight:650
+}
+.level{
+  color:var(--muted)
+}
+.final{
+  background:#f1f7ed
+}
+
+/* ===== CSS 09. 하단 문구와 접근성 보조 ===== */
+footer{
+  max-width:1248px;
+  margin:20px auto 0;
+  padding:22px 24px;
+  border-top:1px solid var(--line);
+  font-size:12px;
+  letter-spacing:.04em;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between
+}
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0
+}
+
+/* ===== CSS 10. 시험 발사와 골드 획득 애니메이션 ===== */
+#flight-flash{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+  color:#477820;
+  font:bold 26px ui-monospace,monospace;
+  opacity:0;
+  pointer-events:none
+}
+.firing img{
+  animation:flight .65s ease-in both
+}
+.firing #flight-flash{
+  animation:reward .65s ease-in both
+}
+@keyframes flight{
+  0%{
+    transform:translateX(0)
+  }
+  65%{
+    transform:translateX(110%)
+  }
+  100%{
+    transform:translateX(110%)
+  }
+
+}
+@keyframes reward{
+  0%,65%{
+    opacity:0
+  }
+  80%,100%{
+    opacity:1
+  }
+
+}
+
+/* ===== CSS 11. 움직임 줄이기 설정 ===== */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation:none!important;
+    transition:none!important
+  }
+
+}
+
+/* ===== CSS 12. 모바일 화면 배치 ===== */
+@media(max-width:760px){
+  .topbar{
+    padding:18px
+  }
+  .brand span{
+    font-size:12px
+  }
+  .outline{
+    padding:9px 13px;
+    font-size:14px
+  }
+  main{
+    padding:30px 18px
+  }
+  .lead{
+    font-size:16px
+  }
+  .workshop{
+    grid-template-columns:1fr
+  }
+  .game-heading{
+    align-items:start
+  }
+  .game-heading h1,.catalog-heading h1{
+    font-size:26px
+  }
+  .wallet strong{
+    font-size:22px
+  }
+  .missile-panel,.control-panel{
+    padding:20px
+  }
+  .missile-panel{padding-block:10px}
+  .sprite-stage{
+    height:120px
+  }
+  .stats{
+    grid-template-columns:1fr 1fr;
+    gap:20px
+  }
+  .catalog-heading{
+    align-items:center
+  }
+  .panel-head{
+    font-size:12px
+  }
+  .game-heading .eyebrow{
+    font-size:11px
+  }
+  footer{
+    padding:20px 18px
+  }
+  .catalog-heading .eyebrow{
+    font-size:12px
+  }
+
+}
+
+/* ===== CSS 13. 지상 시험장 ===== */
+.range-scene{position:relative;height:clamp(320px,55vh,560px);overflow:hidden;border:1px solid var(--line);border-radius:14px;background:linear-gradient(#9dc8da,#e2eef0 66%,#74865b 66%)}
+.range-sky-label{position:absolute;top:20px;left:22px;color:#345466;font:600 12px monospace;letter-spacing:.1em}
+.range-platform{position:absolute;left:1%;bottom:19%;width:clamp(64px,12%,140px);aspect-ratio:1;object-fit:contain;image-rendering:pixelated;z-index:2;pointer-events:none}
+.range-ground{position:absolute;inset:66% 0 0;width:100%;border:0;border-top:8px solid #71894e;border-radius:0;background:repeating-linear-gradient(0deg,#68533e 0 22px,#715b43 22px 24px);color:#f6ead9;cursor:crosshair;touch-action:manipulation}
+.range-ground:hover:not(:disabled),.range-ground:active:not(:disabled){transform:none;background:#806747}
+.range-ground:disabled{opacity:1}
+.range-ground:focus-visible{outline-offset:-6px}
+.range-projectile{position:absolute;width:clamp(64px,12vw,130px);height:auto;image-rendering:pixelated;mix-blend-mode:multiply;pointer-events:none;left:8%;top:24%}
+.range-impact{position:absolute;width:72px;height:72px;transform:translate(-50%,-50%);pointer-events:none;border-radius:50%;background:radial-gradient(circle,#fff6ba 0 20%,#ffbc46 22% 42%,#d86b2c 45% 62%,#48372c 65%);animation:ground-impact .45s ease-out both}
+@keyframes ground-impact{from{transform:translate(-50%,-50%) scale(.2)}to{transform:translate(-50%,-50%) scale(1);opacity:.65}}
+#range-status{min-height:52px;color:var(--accent)}
+@media(prefers-reduced-motion:reduce){.range-impact{animation:none}}
+
+.range-reach{position:absolute;left:8%;top:66%;bottom:0;background:#a9e86122;border-right:2px dashed #c3f76b;pointer-events:none}
+.range-scroll{overflow-x:auto;border-radius:14px}
+.range-scroll .range-scene{min-width:720px}
+.tank-target{position:absolute;top:80%;translate:-50% -72px;width:116px;min-height:0;padding:0;border:0;background:transparent;color:#fff4bd;z-index:3;text-align:center;line-height:1.4}
+.tank-target img{display:block;width:116px;height:72px;object-fit:contain;filter:drop-shadow(0 3px 2px #302d26)}
+.tank-target strong,.tank-target small{display:block;text-shadow:1px 1px 2px #000}
+.tank-target strong{font-size:13px;margin-top:5px}
+.tank-target small{font-size:11px}
+.tank-target:hover:not(:disabled),.tank-target:active:not(:disabled){transform:none;background:transparent}
+.tank-target:hover:not(:disabled) img{filter:drop-shadow(0 0 5px #e6ffb0)}
+.tank-target:disabled{opacity:1}
+.tank-target.destroyed img{filter:grayscale(1) brightness(.4)}
+.range-projectile,.range-impact{z-index:4}
+</style>
+  </head>
+  <body>
+    <main>
+      <!-- ===== HTML 03. 메인 화면 — 제목과 시작하기 버튼 ===== -->
+      <section id="home" class="screen home" aria-labelledby="home-title">
+        <h1 id="home-title">미사일 강화 게임</h1>
+        <button id="start" class="primary start">시작하기 <span aria-hidden="true">→</span></button>
+      </section>
+      <!-- ===== HTML 04. 게임 화면 ===== -->
+      <section id="game" class="screen" hidden="" aria-labelledby="game-title">
+        <!-- ===== HTML 04-1. 게임 제목과 보유 골드 ===== -->
+        <div class="workshop">
+          <dialog id="shop-dialog" class="shop-panel" aria-label="상점">
+            <form method="dialog"><button class="outline" autofocus>닫기</button></form>
+            <p class="shop-price">1개 · 1,000 G</p>
+            <button id="buy-ticket" class="primary">방지권 1개 구매</button>
+            <p>보유 방지권 <strong id="shop-ticket-count">0</strong>개</p>
+            <p class="shop-price">1개 · 5,000 G</p>
+            <button id="buy-chance" class="primary">확률증가권 1개 구매</button>
+            <p>보유 확률증가권 <strong id="shop-chance-count">0</strong>개</p>
+          </dialog>
+          <!-- ===== HTML 04-2. 현재 미사일 그림과 진화 진행 상태 ===== -->
+          <div class="missile-panel">
+            <button id="shop-button" class="outline" aria-haspopup="dialog" aria-controls="shop-dialog">상점</button>
+            <h1 id="game-title">미사일 강화 게임</h1>
+            <p class="upgrade-chance">강화 성공 확률: <strong id="success-rate">99%</strong></p>
+            <div class="panel-head">
+              <div class="wallet">
+                <span>보유 골드</span>
+                <strong><span id="gold">100</span> <small>G</small></strong>
+              </div>
+            </div>
+            <button id="catalog-button" class="outline">미사일 도감 <span aria-hidden="true">▦</span></button>
+            <div class="sprite-stage">
+              <img id="current-sprite" alt="SS.10 픽셀 미사일" src="assets/missile-01.png">
+              <div id="flight-flash" aria-hidden="true">
+                + GOLD
+              </div>
+            </div>
+            <div class="missile-heading">
+              <div>
+                <p>현재 미사일</p>
+                <h2 id="missile-name">+1 SS.10</h2>
+              </div>
+            </div>
+            <div class="missile-actions">
+              <div class="protection-controls">
+                <p>보유 방지권 <strong id="ticket-count">0</strong>개</p>
+                <p>보유 확률증가권 <strong id="chance-count">0</strong>개</p>
+                <div class="ticket-buttons">
+                <button id="use-ticket" class="outline" aria-pressed="false" disabled>방지권 사용하기</button>
+                <button id="use-chance" class="outline" aria-pressed="false" disabled>확률증가권 사용하기</button>
+                </div>
+              </div>
+              <button id="upgrade" class="primary">강화하기 <span id="cost">50 G</span></button>
+              <button id="launch" class="secondary">시험 발사 <span id="reward">+25 G</span></button>
+            </div>
+          </div>
+        </div>
+        <p id="status" class="game-status" hidden></p>
+      </section>
+      <!-- ===== HTML 04-4. 지상 시험장 ===== -->
+      <section id="test-range" class="screen" hidden aria-labelledby="test-title">
+        <div class="game-heading">
+          <div><h1 id="test-title">지상 시험장</h1></div>
+          <button id="range-back" class="outline">← 강화실로</button>
+        </div>
+        <p><strong id="range-missile"></strong> · 발사 보상 <strong id="range-reward"></strong> · 보유 <strong id="range-gold"></strong></p>
+        <p id="range-scale" class="help"></p>
+        <div class="range-scroll" tabindex="0" role="region" aria-label="탱크 사격 시험장. 좁은 화면에서는 좌우로 스크롤하세요.">
+        <div id="range-scene" class="range-scene">
+          <span class="range-sky-label">TEST FIELD / 지상 충돌 시험</span>
+          <img id="range-launcher" class="range-platform" src="assets/launcher.png" alt="모든 미사일이 사용하는 픽셀 지상 발사대">
+          <button id="range-ground" class="range-ground" aria-label="땅에 미사일 발사"></button>
+          <div id="range-reach" class="range-reach" aria-hidden="true"></div>
+          <button id="target-t34" class="tank-target" type="button"><img src="assets/tank-t34.svg" alt=""><strong>T-34 · 50m</strong><small id="target-t34-hp"></small></button>
+          <button id="target-t54" class="tank-target" type="button"><img src="assets/tank-t54.svg" alt=""><strong>T-54 · 150m</strong><small id="target-t54-hp"></small></button>
+          <button id="target-abrams" class="tank-target" type="button"><img src="assets/tank-abrams.svg" alt=""><strong>에이브람스 · 300m</strong><small id="target-abrams-hp"></small></button>
+          <img id="range-projectile" class="range-projectile" src="assets/missile-01.png" alt="" hidden>
+          <div id="range-impact" class="range-impact" aria-hidden="true" hidden></div>
+        </div>
+        </div>
+        <p id="range-status" role="status" aria-live="polite"></p>
+      </section>
+      <!-- ===== HTML 05. 미사일 도감 화면 ===== -->
+      <section id="catalog" class="screen" hidden="" aria-labelledby="archive-title">
+        <div class="catalog-heading">
+          <div>
+            <p class="eyebrow">MISSILE ARCHIVE</p>
+            <h1 id="archive-title">미사일 도감</h1>
+          </div>
+          <button id="back" class="outline">← 돌아가기</button>
+        </div>
+        <p class="catalog-note">20종의 기본 능력치입니다. 실제 제원이나 성능 순위가 아닙니다. 픽셀 그림은 실물 외형을 단순화한 게임용 이미지입니다.</p>
+        <section aria-labelledby="catalog-title">
+          <div class="section-title">
+            <h2 id="catalog-title">강화 단계별 성능</h2>
+            <span>01 — 20 <span class="muted">/ 기본 능력치</span></span>
+          </div>
+          <!-- ===== HTML 05-1. 기본 성능표 — 행은 JS 08에서 생성 ===== -->
+          <div class="table-wrap" tabindex="0" role="region" aria-label="미사일 성능표. 작은 화면에서는 좌우로 스크롤할 수 있습니다.">
+            <table>
+              <caption class="sr-only">20종 미사일의 게임용 폭발 범위, 피해량, 사거리, 비행 속도</caption>
+              <thead>
+                <tr>
+                  <th scope="col">단계</th>
+                  <th scope="col">미사일 / 참고 이미지</th>
+                  <th scope="col">폭발 범위<small>반경 · m</small></th>
+                  <th scope="col">폭발력<small>피해량</small></th>
+                  <th scope="col">사거리<small>m</small></th>
+                  <th scope="col">비행 속도<small>m/s</small></th>
+                </tr>
+              </thead>
+              <tbody id="missiles"></tbody>
+            </table>
+          </div>
+          <p class="footnote">폭발 범위는 반경 기준입니다. 반경 5m의 폭발은 지름 10m 범위에 영향을 줍니다. 1~20단계 모두 게임용 픽셀 그림입니다.</p>
+          <noscript>성능표를 보려면 브라우저의 JavaScript를 켜주세요.</noscript>
+        </section>
+      </section>
+    </main>
+    <!-- ===== SCRIPT. 게임 동작 — DATA 01 / IMAGE 01 / JS 01~09로 검색 ===== -->
+    <script>
+// ===== DATA 01. 미사일 기본 능력치 =====
+// 게임용 수치입니다. 실제 무기 제원이 아닙니다.
+// 각 행: [이름, 폭발 반경(m), 폭발력, 사거리(m), 속도(m/s)]
+const missiles = [
+  ["SS.10",2,100,100,30], // 01단계
+  ["ENTAC",2.5,160,120,34], // 02단계
+  ["말륫카",3,260,145,39], // 03단계
+  ["M47 드래곤",3.5,420,175,45], // 04단계
+  ["MILAN",4,680,210,52], // 05단계
+  ["BGM-71 TOW",5,1100,250,60], // 06단계
+  ["FGM-148 재블린",6,1800,300,69], // 07단계
+  ["스파이크 LR",7,2900,360,79], // 08단계
+  ["AGM-114 헬파이어",8,4700,430,91], // 09단계
+  ["브림스톤",9.5,7600,520,105], // 10단계
+  ["AGM-65 매버릭",11,12300,620,121], // 11단계
+  ["엑조세",13,19900,750,139], // 12단계
+  ["하푼",15,32200,900,160], // 13단계
+  ["NSM",18,52100,1080,184], // 14단계
+  ["토마호크",21,84300,1300,212], // 15단계
+  ["스톰 섀도",25,136400,1560,244], // 16단계
+  ["타우러스 KEPD 350",29,220700,1870,281], // 17단계
+  ["AGM-158 JASSM-ER",34,357100,2250,323], // 18단계
+  ["AGM-158C LRASM",40,577800,2700,372], // 19단계
+  ["PrSM",47,935000,3240,428], // 20단계
+];
+
+// ===== IMAGE 01. 기존 참고 사진과 출처 =====
+// 1~20단계 픽셀 그림 경로는 game.js의 JS 01 영역에서 지정합니다.
+window.missileImages = [
+  {
+    "name": "SS.10",
+    "url": "https://history.redstone.army.mil/ihist/ss10_29mar61_rsa_01.jpg",
+    "source": "https://history.redstone.army.mil/ihist-1950.html",
+    "title": "SS-10 Antitank Missile in Launch Container",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "ENTAC",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/5/52/ENTAC_56_501607_fh000001.jpg",
+    "source": "https://military-history.fandom.com/wiki/ENTAC",
+    "title": "ENTAC Model 56 Cutaway Missile",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Malyutka",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/cd/9M14_Malyutka_cutaway_2021.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File%3A9M14_Malyutka_cutaway_2021.jpg",
+    "title": "9M14 Malyutka Cutaway on 9P111 Launcher",
+    "reuse": "Search identifies Boevaya mashina, Creative Commons share-alike; exact version must be verified."
+  },
+  {
+    "name": "M47 Dragon",
+    "url": "https://cdn10.picryl.com/photo/1987/07/23/a-us-army-soldier-sights-an-m47-dragon-anti-tank-missile-during-exercise-cobra-e8ddf0-1024.jpg",
+    "source": "https://nara.getarchive.net/media/a-us-army-soldier-sights-an-m47-dragon-anti-tank-missile-during-exercise-cobra-e8ddf0",
+    "title": "Soldier Aiming M47 Dragon Missile",
+    "reuse": "Search result identifies public domain U.S. military photograph; photographer SSGT Valentino M. Gempis."
+  },
+  {
+    "name": "MILAN",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/MILAN_P1220770.jpg/1280px-MILAN_P1220770.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File%3AMILAN_P1220770.jpg",
+    "title": "MILAN ER Anti-Tank Missile Display",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "BGM-71 TOW",
+    "url": "https://live.staticflickr.com/7810/47437848832_bd7efeff30_b.jpg",
+    "source": "https://www.flickr.com/photos/rocbolt/47437848832",
+    "title": "BGM-71 TOW Missile Exhibit",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "FGM-148 Javelin",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/df/FGM-148_Javelin_at_Saber_Strike%2C_2016.jpg",
+    "source": "https://en.wikipedia.org/wiki/Missile",
+    "title": "FGM-148 Javelin Live-Fire at Saber Strike 16",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Spike LR",
+    "url": "https://cdn-legacy.defence24.pl/defence24.com/upload/2020-05-08/qa0aa4_SPIKELR2.jpg",
+    "source": "https://defence24.com/industry/polish-development-of-spike-atgm",
+    "title": "SPIKE-LR Missile Launch",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "AGM-114 Hellfire",
+    "url": "https://media.defense.gov/2017/Sep/02/2002404549/1460/1280/0/170902-N-AX638-0057.JPG",
+    "source": "https://www.navy.mil/Resources/Fact-Files/Display-FactFiles/Article/2168362/agm-114bkmn-hellfire-missile/",
+    "title": "Loading a Hellfire Missile on Deck",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Brimstone",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Brimstone_missile.jpg/1280px-Brimstone_missile.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File%3ABrimstone_missile.jpg",
+    "title": "Brimstone Missile Cutaway Diagram",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "AGM-65 Maverick",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/AGM-65_Maverick2.jpg/640px-AGM-65_Maverick2.jpg",
+    "source": "https://hu.wikipedia.org/wiki/AGM%E2%80%9365_Maverick",
+    "title": "AGM-65 Maverick Preflight Armament",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Exocet",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Misil_Exocet_-_panoramio.jpg",
+    "source": "https://en.wikipedia.org/wiki/List_of_active_Brazilian_Navy_ships",
+    "title": "Exocet Anti-Ship Missile Display",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Harpoon",
+    "url": "https://www.history.navy.mil/content/history/nhhc/our-collections/photography/numerical-list-of-images/nhhc-series/nh-series/KN-23000/KN-23734/_jcr_content/mediaitem/image.img.jpg/1459316632371.jpg",
+    "source": "https://www.history.navy.mil/our-collections/photography/numerical-list-of-images/nhhc-series/nh-series/KN-23000/KN-23734.html",
+    "title": "Harpoon Missile Launch",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Naval Strike Missile",
+    "url": "https://www.regjeringen.no/contentassets/faf0410429364150a0335249e14ecbe1/nsm_foto-kda.jpg?preset=article&v=1741758199",
+    "source": "https://www.regjeringen.no/en/whats-new/den-britiske-marinen-tar-i-bruk-norske-sjomalsmissiler/id2948032/",
+    "title": "Norwegian Naval Strike Missile Test Launch",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Tomahawk",
+    "url": "https://assets.bwbx.io/images/users/iqjWHBFdfxIU/iFOFjx_AqczE/v1/-1x-1.webp",
+    "source": "https://www.bloomberg.com/opinion/articles/2024-01-29/how-the-us-can-strike-back-at-iran-after-deadly-drone-attack",
+    "title": "Tomahawk Missile Launch",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Storm Shadow",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/RAF_Museum%2C_Colindale%2C_London_-_DSC06025.JPG",
+    "source": "https://en.wikipedia.org/wiki/List_of_Indian_military_missiles",
+    "title": "Storm Shadow Missile Exhibit",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "Taurus KEPD 350",
+    "url": "https://rossaprimavera.ru/static/files/4bdbbc8d828f.jpg",
+    "source": "https://rossaprimavera.ru/news/2401635c",
+    "title": "Taurus KEPD 350 Cruise Missile on Display",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "JASSM-ER",
+    "url": "https://cdn.tienphong.vn/images/acaaf3972f12824005b323aa5fc6b75a00817fa5dd6fb0c23f843852a5fadf4d601f854d6429a1e8901b70e5500566e8714ef85a15986e12ec866c53661a093d/2_vlyp.jpg",
+    "source": "https://tienphong.vn/suc-manh-ten-lua-jassm-er-ma-my-khong-tiec-tien-mua-post1228039.tpo",
+    "title": "AGM-158 JASSM-ER Missile Display",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "LRASM",
+    "url": "https://d1ldvf68ux039x.cloudfront.net/thumbs/photos/2511/9385224/1000w_q95.jpg",
+    "source": "https://www.dvidshub.net/image/9385224/patrol-squadron-vp-30-lrasm-load",
+    "title": "VP-30 LRASM Loading Operation",
+    "reuse": "License/credit must be verified at source before publication."
+  },
+  {
+    "name": "PrSM",
+    "url": "https://d2cto119c3bgok.cloudfront.net/thumbs/photos/2312/8158607/1000w_q95.jpg",
+    "source": "https://www.dvidshub.net/image/8158607/army-announces-first-precision-strike-missiles-delivery",
+    "title": "Precision Strike Missile Launch",
+    "reuse": "License/credit must be verified at source before publication."
+  }
+]
+;
+
+// ===== JS 01. 공통 도구와 게임 상태 =====
+// 시작 골드: state.gold / 현재 연속 강화 성공 횟수: state.upgrades
+const $ = id => document.getElementById(id);
+const state = {
+  started: false,
+  gold: 100,
+  upgrades: 0,
+  protectionTickets: 0,
+  protectionActive: false,
+  chanceTickets: 0,
+  chanceActive: false,
+  launching: false,
+  screen: 'home'
+};
+const MAX = Number.MAX_SAFE_INTEGER;
+const PROTECTION_PRICE = 1000;
+const CHANCE_PRICE = 5000;
+// 현재 미사일 단계에 따라 99%에서 1%까지 감소합니다.
+const upgradeSuccessPercent = stage => Math.round(99 - 98 * stage / (missiles.length - 1));
+const format = n => n >= 1e12
+  ? n.toExponential(2)
+  : Math.round(n).toLocaleString('ko-KR');
+const sprite = i => `assets/missile-${String(i + 1).padStart(2, '0')}.png`;
+// 첫 기체의 최소 크기를 유지하면서 폭발력에 비례해 확대합니다.
+// 최종 기본 기체의 폭발력을 최대 크기 기준으로 사용합니다.
+const missileSizeRatio = damage => Math.max(0, Math.min(1,
+  (damage - missiles[0][2]) / (missiles[missiles.length - 1][2] - missiles[0][2])));
+
+// ===== JS 02. 강화 단계 · 비용 · 발사 보상 계산 =====
+// 성공하면 다음 미사일로 진화하고 실패하면 첫 기체로 돌아갑니다. 최종 기체는 성공 시 계속 강화합니다.
+function current() {
+  const stage = Math.min(19, state.upgrades);
+  const level = stage === 19 ? state.upgrades - 19 : 0;
+  const cost = Math.min(MAX, Math.round(50 * Math.pow(1.15, state.upgrades)));
+  const reward = Math.min(MAX, Math.round(25 * Math.pow(1.15, state.upgrades)));
+  const successPercent = Math.min(100, upgradeSuccessPercent(stage) + (state.chanceActive ? 10 : 0));
+  const data = missiles[stage];
+  const scale = Math.min(1e100, Math.pow(1.005, level));
+  const stats = {
+    radius: Math.round(data[1] * scale * 10) / 10,
+    damage: Math.round(Math.min(1e100, data[2] * Math.pow(1.04, level))),
+    range: Math.round(data[3] * scale),
+    speed: Math.round(data[4] * scale)
+  };
+  return { stage, level, cost, reward, successPercent, data, stats };
+}
+
+// ===== JS 03. 메인 · 게임 · 도감 화면 전환 =====
+function show(screen) {
+  if (state.launching) return;
+  state.screen = screen;
+  document.body.classList.toggle('game-started', state.started && screen !== 'home');
+  ['home', 'game', 'catalog', 'test-range'].forEach(id => $(id).hidden = id !== screen);
+  $('catalog-button').hidden = screen === 'catalog';
+  window.scrollTo(0, 0);
+  const heading = $(screen === 'home'
+    ? 'home-title'
+    : screen === 'game' ? 'game-title' : screen === 'test-range' ? 'test-title' : 'archive-title');
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+}
+
+// ===== JS 04. 게임 화면의 숫자 · 그림 · 버튼 갱신 =====
+function render() {
+  const { stage, level, cost, reward, successPercent, data, stats } = current();
+
+  // 04-1. 골드와 현재 미사일
+  $('gold').textContent = format(state.gold);
+  $('missile-name').textContent = `+${state.upgrades + 1} ${data[0]}`;
+  const img = $('current-sprite');
+  if (img.getAttribute('src') !== sprite(stage)) img.src = sprite(stage);
+  img.alt = data[0] + ' 픽셀 미사일';
+  img.style.width = (30 + 70 * missileSizeRatio(stats.damage)) + '%';
+
+  // 04-3. 강화 비용과 버튼 활성화 조건
+  $('cost').textContent = format(cost) + ' G';
+  $('success-rate').textContent = successPercent + '%';
+  $('reward').textContent = '+' + format(reward) + ' G';
+  $('upgrade').disabled = state.gold < cost || state.launching;
+  $('launch').disabled = state.launching;
+  $('ticket-count').textContent = format(state.protectionTickets);
+  $('shop-ticket-count').textContent = format(state.protectionTickets);
+  $('shop-button').disabled = state.launching;
+  $('buy-ticket').disabled = state.gold < PROTECTION_PRICE || state.launching;
+  $('use-ticket').disabled = state.protectionTickets < 1 || state.protectionActive || state.launching;
+  $('use-ticket').textContent = state.protectionActive ? '보호 적용 중' : '방지권 사용하기';
+  $('use-ticket').setAttribute('aria-pressed', String(state.protectionActive));
+  $('chance-count').textContent = format(state.chanceTickets);
+  $('shop-chance-count').textContent = format(state.chanceTickets);
+  $('buy-chance').disabled = state.gold < CHANCE_PRICE || state.launching;
+  $('use-chance').disabled = state.chanceTickets < 1 || state.chanceActive || state.launching;
+  $('use-chance').textContent = state.chanceActive ? '확률 +10%p 적용 중' : '확률증가권 사용하기';
+  $('use-chance').setAttribute('aria-pressed', String(state.chanceActive));
+
+}
+
+// ===== JS 05. 시작하기 · 도감 · 돌아가기 버튼 =====
+$('start').addEventListener('click', () => {
+  state.started = true;
+  show('game');
+  render();
+  $('start').firstChild.textContent = '계속하기 ';
+});
+$('catalog-button').addEventListener('click', () => show('catalog'));
+$('back').addEventListener('click', () => show(state.started ? 'game' : 'home'));
+
+// ===== JS 06. 골드 소비 · 미사일 강화 · 진화 =====
+$('shop-button').addEventListener('click', () => {
+  if (state.launching || state.screen !== 'game') return;
+  render();
+  if (!$('shop-dialog').open) $('shop-dialog').showModal();
+});
+$('buy-ticket').addEventListener('click', () => {
+  if (state.launching || state.gold < PROTECTION_PRICE) return;
+  state.gold -= PROTECTION_PRICE;
+  state.protectionTickets++;
+  render();
+});
+$('use-ticket').addEventListener('click', () => {
+  if (state.launching || state.protectionActive || state.protectionTickets < 1) return;
+  state.protectionTickets--;
+  state.protectionActive = true;
+  render();
+});
+$('buy-chance').addEventListener('click', () => {
+  if (state.launching || state.gold < CHANCE_PRICE) return;
+  state.gold -= CHANCE_PRICE;
+  state.chanceTickets++;
+  render();
+});
+$('use-chance').addEventListener('click', () => {
+  if (state.launching || state.chanceActive || state.chanceTickets < 1) return;
+  state.chanceTickets--;
+  state.chanceActive = true;
+  render();
+});
+$('upgrade').addEventListener('click', () => {
+  const before = current();
+  if (state.launching || state.gold < before.cost) return;
+  state.gold -= before.cost;
+  const protectedUpgrade = state.protectionActive;
+  state.protectionActive = false;
+  state.chanceActive = false;
+  if (Math.random() < before.successPercent / 100) {
+    state.upgrades++;
+    const after = current();
+    $('status').textContent = before.stage !== after.stage
+      ? `강화 성공! ${after.data[0]}(으)로 진화했어요!`
+      : `강화 성공! ${after.data[0]} +${after.level}`;
+  } else if (protectedUpgrade) {
+    $('status').textContent = `강화 실패! 방지권으로 +${state.upgrades + 1} 단계를 유지했습니다. 강화 비용 ${format(before.cost)} G가 소모됐어요.`;
+  } else {
+    state.upgrades = 0;
+    $('status').textContent = `강화 실패! 첫 미사일 ${missiles[0][0]}(으)로 돌아왔어요. 강화 비용 ${format(before.cost)} G가 소모됐어요.`;
+  }
+  render();
+});
+
+// ===== JS 07. 시험장 이동 · 지상 발사 · 골드 획득 =====
+// 게임용 내구도이며 실제 전차 성능을 나타내지 않습니다.
+const testField = { width: 350, targets: [
+  { id: 'target-t34', name: 'T-34', distance: 50, maxHp: 1000, hp: 1000, bounty: 50 },
+  { id: 'target-t54', name: 'T-54', distance: 150, maxHp: 10000, hp: 10000, bounty: 400 },
+  { id: 'target-abrams', name: '에이브람스', distance: 300, maxHp: 100000, hp: 100000, bounty: 1000 }
+] };
+function launchOrigin() {
+  const scene = $('range-scene').getBoundingClientRect();
+  const launcher = $('range-launcher').getBoundingClientRect();
+  return {
+    x: (launcher.left + launcher.width * 0.94 - scene.left) / scene.width * 100,
+    y: (launcher.top + launcher.height * 0.14 - scene.top) / scene.height * 100
+  };
+}
+function shotMetrics(stats, distance) {
+  return { allowed: distance <= stats.range, duration: distance / stats.speed * 1000 };
+}
+function renderRange() {
+  const { data, reward, stats } = current();
+  const origin = launchOrigin();
+  const span = 94 - origin.x;
+  $('range-missile').textContent = data[0];
+  $('range-reward').textContent = '+' + format(reward) + ' G';
+  $('range-gold').textContent = format(state.gold) + ' G';
+  $('range-scale').textContent = testField.targets.map(target => `${target.name} 내구도 ${format(target.hp)}`).join(' · ');
+  $('range-reach').style.left = origin.x + '%';
+  $('range-reach').style.width = Math.min(span, stats.range / testField.width * span) + '%';
+  testField.targets.forEach(target => {
+    const button = $(target.id);
+    button.style.left = (origin.x + target.distance / testField.width * span) + '%';
+    button.classList.toggle('destroyed', target.hp === 0);
+    button.disabled = state.launching || target.hp === 0;
+    button.setAttribute('aria-label', `${target.name}, ${target.distance}m, 내구도 ${format(target.hp)}${target.hp === 0 ? ', 파괴됨' : ', 조준하여 발사'}`);
+    $(target.id + '-hp').textContent = target.hp === 0 ? '파괴됨' : `${format(target.hp)} / ${format(target.maxHp)}`;
+  });
+  ['range-ground', 'range-back', 'catalog-button'].forEach(id => $(id).disabled = state.launching);
+}
+$('launch').addEventListener('click', () => {
+  if (state.launching) return;
+  testField.targets.forEach(target => target.hp = target.maxHp);
+  $('range-impact').hidden = true;
+  $('range-status').textContent = '';
+  show('test-range');
+  renderRange();
+});
+$('range-back').addEventListener('click', () => { show('game'); render(); });
+function fireShot(e, selectedTarget) {
+  if (state.launching || state.screen !== 'test-range') return;
+  const { stage, reward, stats } = current();
+  const bounds = $('range-scene').getBoundingClientRect();
+  const origin = launchOrigin();
+  const span = 94 - origin.x;
+  // 발사대 끝을 거리 0으로 사용하며 키보드 발사는 표적을 조준합니다.
+  const aimTarget = selectedTarget || (e.detail === 0 ? testField.targets.find(target => target.hp > 0 && target.distance <= stats.range) : null);
+  const clickedX = Math.max(origin.x, Math.min(94, (e.clientX - bounds.left) / bounds.width * 100));
+  const y = 80; // 땅의 가로 위치를 거리로 환산하는 측면 시험장입니다.
+  const distance = aimTarget ? aimTarget.distance : e.detail === 0 ? Math.min(stats.range, testField.width) : (clickedX - origin.x) / span * testField.width;
+  const x = origin.x + distance / testField.width * span;
+  const shot = shotMetrics(stats, distance);
+  if (!shot.allowed) {
+    $('range-status').textContent = `사거리 밖입니다. 선택 거리 ${format(distance)} m / 최대 ${format(stats.range)} m`;
+    return;
+  }
+  state.launching = true;
+  const projectile = $('range-projectile');
+  const impact = $('range-impact');
+  projectile.src = sprite(stage);
+  projectile.style.width = (36 + 94 * missileSizeRatio(stats.damage)) + 'px';
+  projectile.style.left = origin.x + '%';
+  projectile.style.top = origin.y + '%';
+  projectile.style.transform = 'translate(-50%, -50%) rotate(-35deg)';
+  projectile.hidden = false;
+  impact.hidden = true;
+  $('range-status').textContent = `${format(distance)} m 지점으로 비행 중… 예상 ${(shot.duration / 1000).toFixed(2)}초`;
+  render();
+  renderRange();
+  const duration = Math.max(1, shot.duration);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const arc = Math.min(35, Math.max(12, (x - origin.x) * 0.45));
+  let start;
+  function fly(now) {
+    if (start === undefined) start = now;
+    const t = Math.min(1, (now - start) / duration);
+    projectile.hidden = reducedMotion;
+    projectile.style.left = (origin.x + (x - origin.x) * t) + '%';
+    projectile.style.top = (origin.y + (y - origin.y) * t - 4 * arc * t * (1 - t)) + '%';
+    const angle = Math.atan2(((y - origin.y) - 4 * arc * (1 - 2 * t)) * bounds.height, (x - origin.x) * bounds.width) * 180 / Math.PI;
+    projectile.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    if (t < 1) { requestAnimationFrame(fly); return; }
+    projectile.hidden = true;
+    impact.style.left = x + '%';
+    impact.style.top = y + '%';
+    const diameter = stats.radius * 2 / testField.width * bounds.width * span / 100;
+    impact.style.width = diameter + 'px';
+    impact.style.height = diameter + 'px';
+    impact.hidden = false;
+    const hits = [];
+    testField.targets.forEach(target => {
+      const offset = Math.abs(distance - target.distance);
+      const damage = offset <= stats.radius ? Math.round(stats.damage * Math.max(0, 1 - offset / stats.radius)) : 0;
+      const applied = Math.min(target.hp, damage);
+      target.hp -= applied;
+      if (applied > 0) {
+        if (target.hp === 0) state.gold = Math.min(MAX, state.gold + target.bounty);
+        hits.push(`${target.name} 피해 ${format(applied)} · ${target.hp === 0 ? '파괴! 보상 +' + format(target.bounty) + ' G' : '남은 내구도 ' + format(target.hp)}`);
+      }
+    });
+    const result = hits.length ? hits.join(' / ') : '지상 명중! 표적 피해 없음';
+    $('range-status').textContent = result;
+    renderRange();
+    setTimeout(() => {
+      state.gold = Math.min(MAX, state.gold + reward);
+      state.launching = false;
+      const message = `시험 발사 완료! ${format(reward)} 골드를 획득했어요.`;
+      $('range-status').textContent = result + ' · ' + message;
+      $('status').textContent = message;
+      render();
+      renderRange();
+    }, 450);
+  }
+  requestAnimationFrame(fly);
+}
+$('range-ground').addEventListener('click', e => fireShot(e));
+testField.targets.forEach(target => $(target.id).addEventListener('click', e => fireShot(e, target)));
+window.addEventListener('resize', () => { if (state.screen === 'test-range' && !state.launching) renderRange(); });
+
+// ===== JS 08. 미사일 도감의 그림 · 이름 · 성능표 생성 =====
+missiles.forEach(([name, radius, damage, range, speed], i) => {
+  // 08-1. 단계 번호와 행
+  const row = document.createElement('tr');
+  if (i === 19) row.className = 'final';
+  const level = document.createElement('td');
+  level.className = 'level';
+  level.textContent = String(i + 1).padStart(2, '0');
+  row.append(level);
+
+  // 08-2. 미사일 그림과 이름
+  const cell = document.createElement('td');
+  const model = document.createElement('div');
+  model.className = 'model';
+  const img = document.createElement('img');
+  img.src = sprite(i);
+  img.alt = name + ' 픽셀 그림';
+  img.style.width = (42 + 98 * missileSizeRatio(damage)) + 'px';
+  img.loading = 'lazy';
+  img.width = 140;
+  img.height = 90;
+  const label = document.createElement('div');
+  const strong = document.createElement('strong');
+  strong.textContent = name;
+  const small = document.createElement('small');
+  small.textContent = i === 19
+    ? '최종 기본 기체' : 'STAGE ' + String(i + 1).padStart(2, '0');
+  label.append(strong, small);
+
+  // 08-3. 픽셀 그림과 이름 배치
+  model.append(img, label);
+  cell.append(model);
+  row.append(cell);
+
+  // 08-4. 폭발 범위 · 폭발력 · 사거리 · 비행 속도
+  [radius, damage, range, speed].forEach((v, j) => {
+    const td = document.createElement('td');
+    td.textContent = v.toLocaleString('ko-KR');
+    if (j === 1) td.className = 'damage';
+    row.append(td);
+  });
+  $('missiles').append(row);
+});
+
+// ===== JS 09. 페이지를 처음 열었을 때 초기 표시 =====
+render();
+</script>
+  </body>
+</html>
